@@ -1,13 +1,15 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 
 from base64 import b64decode
+from gzip import compress, decompress
 from time import sleep
 from typing import Optional, Any, Dict, Tuple, List, Literal
 from os.path import getsize as path_getsize
 
 from httpx import Client, Response, RequestError
+from orjson import dumps, loads
 
 from .schemas.mediainfo_data import UploadMediaInfoData
 from .schemas.offline import OfflineInfo, OfflineInfoRes
@@ -74,6 +76,7 @@ class Requester:
         headers: Optional[Dict[str, str]] = None,
         json_data: Optional[Dict[str, Any]] = None,
         files_data: Optional[List[Tuple[str, Tuple[str, bytes, str]]]] = None,
+        content_data: Optional[bytes] = None,
         timeout: float = 10.0,
     ) -> Optional[Response]:
         """
@@ -86,6 +89,7 @@ class Requester:
         :param files_data: 文件上传数据。格式为 httpx 的 files 参数格式，例如:
                          [('files', ('filename1.txt', b'content1', 'text/plain')),
                           ('files', ('filename2.jpg', b'content2', 'image/jpeg'))]
+        :param content_data: 内容数据
         :param timeout: 超时时间(秒)
         :return: 响应对象或None
         """
@@ -104,6 +108,8 @@ class Requester:
         elif files_data and method.upper() == "POST":
             kwargs["files"] = files_data  # noqa
             final_headers.pop("Content-Type", None)
+        elif content_data:
+            kwargs["content"] = content_data  # noqa
 
         last_exception = None
 
@@ -318,7 +324,7 @@ class P115Center:
         self, payload: List[Tuple[str, Tuple[str, bytes, str]]]
     ) -> UploadMediaInfoData:
         """
-        上传媒体信息数据
+        上传 115 网盘的媒体信息数据文件
 
         :param payload: 媒体信息数据列表
         :return: UploadMediaInfoData
@@ -333,10 +339,10 @@ class P115Center:
 
     def download_mediainfo_data(self, payload: List[str]) -> List[Dict[str, Any]]:
         """
-        下载媒体信息数据
+        下载 115 网盘的媒体信息数据文件
 
         :param payload: 媒体信息数据文件 sha1 列表
-        :return: None
+        :return: 每项为 {"sha1": str, "data": str | None}，data 为 base64 编码
         """
         resp = self.session.make_request(
             method="POST",
@@ -344,3 +350,68 @@ class P115Center:
             json_data={"sha1s": payload},
         )
         return resp.json()
+
+    def upload_emby_mediainfo_data(self, sha1: str, data: Dict[str, Any], /):
+        """
+        上传 Emby 的媒体信息数据
+
+        :param sha1: 媒体信息数据 SHA1
+        :param data: 媒体信息数据
+        :return: None
+        """
+        self.session.make_request(
+            method="POST",
+            path="/emby_mediainfo_data/upload",
+            content_data=compress(dumps(data)),
+            headers={
+                "Content-Type": "application/x-gzip",
+                "X-SHA1": sha1,
+            },
+            timeout=600.0,
+        )
+
+    def upload_emby_mediainfo_data_bulk(
+        self, payload: List[Tuple[str, Dict[str, Any]]]
+    ) -> UploadMediaInfoData:
+        """
+        批量上传 Emby 的媒体信息数据
+
+        :param payload: (sha1, 媒体信息数据) 列表
+        :return: UploadMediaInfoData
+        """
+        files_data = [
+            ("files", (sha1, compress(dumps(data)), "application/gzip"))
+            for sha1, data in payload
+        ]
+        resp = self.session.make_request(
+            method="POST",
+            path="/emby_mediainfo_data/bulk",
+            files_data=files_data,
+            timeout=600.0,
+        )
+        return UploadMediaInfoData(**resp.json())
+
+    def download_emby_mediainfo_data(
+        self, payload: List[str]
+    ) -> Dict[str, Optional[Any]]:
+        """
+        根据 SHA1 列表批量获取 Emby 媒体信息数据
+
+        :param payload: sha1 列表，单次最多 2000 条
+        :return: 键为 sha1，值为媒体信息数据
+        """
+        resp = self.session.make_request(
+            method="POST",
+            path="/emby_mediainfo_data/get",
+            json_data={"sha1s": payload},
+        )
+        items = resp.json()
+        result = {}
+        for it in items:
+            sha1 = it["sha1"]
+            raw = it.get("data")
+            if raw is not None:
+                result[sha1] = loads(decompress(b64decode(raw)))
+            else:
+                result[sha1] = None
+        return result
