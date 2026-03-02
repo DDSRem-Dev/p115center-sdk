@@ -132,7 +132,12 @@ class P115Center:
     请求模块
     """
 
-    def __init__(self, machine_id: str):
+    def __init__(self, machine_id: str = ""):
+        """
+        初始化请求模块
+
+        :param machine_id: 机器ID（可选）
+        """
         self.session = Requester(max_retries=3, backoff_factor=1.0)
         self.machine_id = machine_id
         self.headers = {"x-machine-id": self.machine_id}
