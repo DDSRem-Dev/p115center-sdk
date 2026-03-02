@@ -22,7 +22,7 @@ class UploadInfo(BaseModel):
     postime: datetime = Field(..., description="上传时间")
 
 
-class UploadInfoRes(BaseModel):
+class UploadInfoRes(UploadInfo):
     """
     上传文件信息返回
     """
