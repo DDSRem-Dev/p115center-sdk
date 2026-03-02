@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 
 from base64 import b64decode
@@ -365,7 +365,7 @@ class P115Center:
             content_data=compress(dumps(data)),
             headers={
                 "Content-Type": "application/x-gzip",
-                "X-SHA1": sha1,
+                "X-SHA1": sha1.upper(),
             },
             timeout=600.0,
         )
@@ -380,7 +380,7 @@ class P115Center:
         :return: UploadMediaInfoData
         """
         files_data = [
-            ("files", (sha1, compress(dumps(data)), "application/gzip"))
+            ("files", (sha1.upper(), compress(dumps(data)), "application/gzip"))
             for sha1, data in payload
         ]
         resp = self.session.make_request(
@@ -403,12 +403,12 @@ class P115Center:
         resp = self.session.make_request(
             method="POST",
             path="/emby_mediainfo_data/get",
-            json_data={"sha1s": payload},
+            json_data={"sha1s": [s.upper() for s in payload]},
         )
         items = resp.json()
         result = {}
         for it in items:
-            sha1 = it["sha1"]
+            sha1 = it["sha1"].upper()
             raw = it.get("data")
             if raw is not None:
                 result[sha1] = loads(decompress(b64decode(raw)))
