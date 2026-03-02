@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "p115center-sdk"
+dynamic = ["version"]
+description = "115 网盘中心化服务 Python SDK"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "DDSRem", email = "ddsrem@xnn.ee" },
+]
+keywords = ["115", "sdk"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "httpx",
+    "pydantic>=2.0.0,<3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DDSRem-Dev/p115center-sdk"
+Repository = "https://github.com/DDSRem-Dev/p115center-sdk"
+Issues = "https://github.com/DDSRem-Dev/p115center-sdk"
+
+[tool.hatch.version]
+path = "p115center/client.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["p115center"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "p115center/",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
