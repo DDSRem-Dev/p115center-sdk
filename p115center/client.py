@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.1.0"
+__version__ = "0.0.1"
 
 
 from base64 import b64decode
