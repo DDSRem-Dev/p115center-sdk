@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 
 from base64 import b64decode
@@ -9,6 +9,7 @@ from os.path import getsize as path_getsize
 
 from httpx import Client, Response, RequestError
 
+from .schemas.mediainfo_data import UploadMediaInfoData
 from .schemas.offline import OfflineInfo, OfflineInfoRes
 from .schemas.share import ShareInfo, ShareInfoRes
 from .schemas.speed import UserSpeedStatus
@@ -311,19 +312,20 @@ class P115Center:
 
     def upload_mediainfo_data(
         self, payload: List[Tuple[str, Tuple[str, bytes, str]]]
-    ) -> None:
+    ) -> UploadMediaInfoData:
         """
         上传媒体信息数据
 
         :param payload: 媒体信息数据列表
-        :return: None
+        :return: UploadMediaInfoData
         """
-        self.session.make_request(
+        resp = self.session.make_request(
             method="POST",
             path="/mediainfo_data/bulk",
             files_data=payload,
             timeout=600.0,
         )
+        return UploadMediaInfoData(**resp.json())
 
     def download_mediainfo_data(self, payload: List[str]) -> List[Dict[str, Any]]:
         """
