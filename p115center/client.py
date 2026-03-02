@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 
 from base64 import b64decode
@@ -11,7 +11,7 @@ from httpx import Client, Response, RequestError
 
 from .schemas.mediainfo_data import UploadMediaInfoData
 from .schemas.offline import OfflineInfo, OfflineInfoRes
-from .schemas.share import ShareInfo, ShareInfoRes
+from .schemas.share import ShareInfo, ShareInfoRes, ShareIterUploadInfo
 from .schemas.speed import UserSpeedStatus
 from .schemas.upload import UploadInfo, UploadInfoRes
 
@@ -278,12 +278,15 @@ class P115Center:
             for chunk in resp.iter_bytes():
                 f.write(chunk)
 
-    def upload_share_file_iter(self, batch_id: str, temp_file: str) -> None:
+    def upload_share_file_iter(
+        self, batch_id: str, temp_file: str
+    ) -> ShareIterUploadInfo:
         """
         上传分享文件信息迭代数据
 
         :param batch_id: 上传 Batch Id
         :param temp_file: 临时文件路径
+        :return: ShareIterUploadInfo
         """
         file_name = f"{batch_id}.json.gz"
         file_size = path_getsize(temp_file)
@@ -303,12 +306,13 @@ class P115Center:
                 (file_name, file_content, "application/gzip"),
             )
         ]
-        self.session.make_request(
+        resp = self.session.make_request(
             path=f"/share/files/{batch_id}",
             method="POST",
             files_data=files_data,
             timeout=600000.0,
         )
+        return ShareIterUploadInfo(**resp.json())
 
     def upload_mediainfo_data(
         self, payload: List[Tuple[str, Tuple[str, bytes, str]]]
