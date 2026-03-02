@@ -48,7 +48,7 @@ class ShareInfoRes(ShareInfo):
     分享信息返回
     """
 
-    _id: str = Field(..., description="用户 ID")
+    id_: str = Field(..., alias="_id", description="用户 ID")
     owner_id: str = Field(..., description="用户 ID")
 
 
