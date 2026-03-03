@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Fetch sign implementation from private repo
+        shell: bash
         env:
           PRIVATE_REPO_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
         run: |
@@ -76,7 +77,7 @@ jobs:
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.conf.os }}-py${{ matrix.python-version }}-${{ matrix.conf.target }}
+          name: wheel-${{ matrix.conf.os }}-py${{ matrix.python-version }}-${{ matrix.conf.target }}-${{ matrix.conf.manylinux || 'host' }}
           path: dist/
 
   publish:
@@ -91,6 +92,8 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: Remove sdist (do not publish .tar.gz)
+        run: rm -f dist/*.tar.gz
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
