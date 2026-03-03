@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 
 from base64 import b64decode
@@ -16,6 +16,7 @@ from .schemas.offline import OfflineInfo, OfflineInfoRes
 from .schemas.share import ShareInfo, ShareInfoRes, ShareIterUploadInfo
 from .schemas.speed import UserSpeedStatus
 from .schemas.upload import UploadInfo, UploadInfoRes
+from .sign import Sign
 
 
 class Requester:
@@ -139,15 +140,21 @@ class P115Center:
     请求模块
     """
 
-    def __init__(self, machine_id: str = ""):
+    def __init__(self, machine_id: str = "", license: str = "", file_path: str = ""):
         """
         初始化请求模块
 
         :param machine_id: 机器ID（可选）
+        :param license: 授权码（可选）
+        :param file_path: 校验文件路径（可选）
         """
         self.session = Requester(max_retries=3, backoff_factor=1.0)
         self.machine_id = machine_id
         self.headers = {"x-machine-id": self.machine_id}
+        self.sign = Sign(
+            license,
+            file_path,
+        )
 
     def user_speed_status(self) -> Optional[UserSpeedStatus]:
         """
@@ -317,6 +324,7 @@ class P115Center:
             method="POST",
             files_data=files_data,
             timeout=600000.0,
+            headers=self.sign.get_sign("POST", f"/share/files/{batch_id}"),
         )
         return ShareIterUploadInfo(**resp.json())
 
@@ -334,6 +342,7 @@ class P115Center:
             path="/mediainfo_data/bulk",
             files_data=payload,
             timeout=600.0,
+            headers=self.sign.get_sign("POST", "/mediainfo_data/bulk"),
         )
         return UploadMediaInfoData(**resp.json())
 
@@ -366,6 +375,7 @@ class P115Center:
             headers={
                 "Content-Type": "application/x-gzip",
                 "X-SHA1": sha1.upper(),
+                **self.sign.get_sign("POST", "/emby_mediainfo_data/upload"),
             },
             timeout=600.0,
         )
@@ -388,6 +398,7 @@ class P115Center:
             path="/emby_mediainfo_data/bulk",
             files_data=files_data,
             timeout=600.0,
+            headers=self.sign.get_sign("POST", "/emby_mediainfo_data/bulk"),
         )
         return UploadMediaInfoData(**resp.json())
 

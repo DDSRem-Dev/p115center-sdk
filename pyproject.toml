@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "p115center-sdk"
-dynamic = ["version"]
+version = "0.0.8"
 description = "115 网盘中心化服务 Python SDK"
 readme = "README.md"
 license = "MIT"
@@ -36,16 +36,6 @@ Homepage = "https://github.com/DDSRem-Dev/p115center-sdk"
 Repository = "https://github.com/DDSRem-Dev/p115center-sdk"
 Issues = "https://github.com/DDSRem-Dev/p115center-sdk"
 
-[tool.hatch.version]
-path = "p115center/client.py"
-
-[tool.hatch.build.targets.wheel]
-packages = ["p115center"]
-
-[tool.hatch.build.targets.sdist]
-include = [
-    "p115center/",
-    "README.md",
-    "LICENSE",
-    "pyproject.toml",
-]
+[tool.maturin]
+module-name = "p115center._sign_impl"
+python-source = "."

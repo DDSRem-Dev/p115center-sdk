@@ -1,0 +1,16 @@
+[package]
+name = "p115center-sdk"
+version = "0.0.8"
+edition = "2021"
+description = "115 网盘中心化服务 Python SDK"
+
+[lib]
+name = "_sign_impl"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+uuid = { version = "1", features = ["v4"] }

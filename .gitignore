@@ -15,3 +15,6 @@ env/
 .pytest_cache/
 .idea/
 .claude/
+src/lib.rs
+target/
+.private-sign/
