@@ -46,7 +46,7 @@ jobs:
 
       - name: Setup QEMU (Linux cross)
         if: matrix.conf.os == 'ubuntu-latest' && matrix.conf.target != 'x86_64'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Build wheel (Linux)
         if: matrix.conf.manylinux != ''
