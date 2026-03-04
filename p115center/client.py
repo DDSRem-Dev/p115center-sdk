@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 
 from base64 import b64decode
@@ -181,7 +181,7 @@ class P115Center:
             path="/upload/info",
             method="POST",
             headers=self.headers,
-            json_data=payload.model_dump(),
+            json_data=payload.model_dump(mode="json"),
             timeout=10.0,
         )
         return UploadInfoRes(**resp.json())
@@ -225,7 +225,7 @@ class P115Center:
             path="/share/info" if mtype == 115 else "/ali_share/info",
             method="POST",
             headers=self.headers,
-            json_data=payload.model_dump(),
+            json_data=payload.model_dump(mode="json"),
             timeout=10.0,
         )
         return ShareInfoRes(**resp.json())
@@ -241,7 +241,7 @@ class P115Center:
             path="/offline/info",
             method="POST",
             headers=self.headers,
-            json_data=payload.model_dump(),
+            json_data=payload.model_dump(mode="json"),
             timeout=10.0,
         )
         return OfflineInfoRes(**resp.json())
