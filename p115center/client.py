@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 
 from base64 import b64decode
@@ -222,7 +222,7 @@ class P115Center:
         :return: ShareInfoRes
         """
         resp = self.session.make_request(
-            path="/share/info" if mtype == 115 else "/ali_share/info",
+            path="/share/info" if mtype == "115" else "/ali_share/info",
             method="POST",
             headers=self.headers,
             json_data=payload.model_dump(mode="json"),
