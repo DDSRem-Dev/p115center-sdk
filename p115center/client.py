@@ -5,7 +5,7 @@ __version__ = "0.0.10"
 from base64 import b64decode
 from gzip import compress, decompress
 from time import sleep
-from typing import Optional, Any, Dict, Tuple, List, Literal
+from typing import Optional, Any, Dict, Tuple, List, Literal, Union
 from os.path import getsize as path_getsize
 
 from httpx import Client, Response, RequestError
@@ -360,14 +360,41 @@ class P115Center:
         )
         return resp.json()
 
-    def upload_emby_mediainfo_data(self, sha1: str, data: Dict[str, Any], /):
+    @staticmethod
+    def get_emby_media_source_size(media_data: Any) -> Optional[int]:
+        """
+        从媒体信息中取出 MediaSourceInfo.Size。
+
+        :param media_data: 中心下发的或 Emby 返回的媒体信息
+        :return: size 字节数，取不到则返回 None
+        """
+        if not media_data:
+            return None
+        item = media_data[0] if isinstance(media_data, list) else media_data
+        if not isinstance(item, dict):
+            return None
+        msi = item.get("MediaSourceInfo")
+        if not isinstance(msi, dict):
+            return None
+        size = msi.get("Size")
+        return int(size) if size is not None else None
+
+    def upload_emby_mediainfo_data(
+        self, sha1: str, data: Dict[str, Any], /, size: Optional[int] = None
+    ) -> bool:
         """
         上传 Emby 的媒体信息数据
 
         :param sha1: 媒体信息数据 SHA1
         :param data: 媒体信息数据
-        :return: None
+        :param size: 媒体信息数据大小(字节)
+        :return: 是否上传成功
         """
+        actual_size = self.get_emby_media_source_size(data)
+        if actual_size is None:
+            return False
+        if size is not None and size > 0 and size != actual_size:
+            return False
         self.session.make_request(
             method="POST",
             path="/emby_mediainfo_data/upload",
@@ -379,20 +406,42 @@ class P115Center:
             },
             timeout=600.0,
         )
+        return True
 
     def upload_emby_mediainfo_data_bulk(
-        self, payload: List[Tuple[str, Dict[str, Any]]]
+        self,
+        payload: List[
+            Union[
+                Tuple[str, Dict[str, Any]],
+                Tuple[str, Dict[str, Any], Optional[int]],
+            ]
+        ],
     ) -> UploadMediaInfoData:
         """
         批量上传 Emby 的媒体信息数据
 
-        :param payload: (sha1, 媒体信息数据) 列表
-        :return: UploadMediaInfoData
+        :param payload: (sha1, 媒体信息数据) 或 (sha1, 媒体信息数据, size) 列表
+        :return: UploadMediaInfoData；校验不通过的项会跳过
         """
-        files_data = [
-            ("files", (sha1.upper(), compress(dumps(data)), "application/gzip"))
-            for sha1, data in payload
-        ]
+        files_data = []
+        for item in payload:
+            if len(item) == 2:
+                sha1, data = item
+                size = None
+            else:
+                sha1, data, size = item
+            actual_size = self.get_emby_media_source_size(data)
+            if actual_size is None:
+                continue
+            if size is not None and size > 0 and size != actual_size:
+                continue
+            files_data.append(
+                ("files", (sha1.upper(), compress(dumps(data)), "application/gzip"))
+            )
+        if not files_data:
+            return UploadMediaInfoData(
+                inserted_count=0, modified_count=0, total_processed=0
+            )
         resp = self.session.make_request(
             method="POST",
             path="/emby_mediainfo_data/bulk",
@@ -403,26 +452,46 @@ class P115Center:
         return UploadMediaInfoData(**resp.json())
 
     def download_emby_mediainfo_data(
-        self, payload: List[str]
+        self,
+        payload: Union[List[str], List[Tuple[str, Optional[int]]]],
     ) -> Dict[str, Optional[Any]]:
         """
         根据 SHA1 列表批量获取 Emby 媒体信息数据
 
-        :param payload: sha1 列表，单次最多 2000 条
-        :return: 键为 sha1，值为媒体信息数据
+        :param payload: sha1 列表，或 (sha1, size) 列表用于校验；单次最多 2000 条
+        :return: 键为 sha1，值为媒体信息数据；无 Size 或 size 校验不通过时为 None
         """
+        if payload and isinstance(payload[0], tuple):
+            sha1_list = [s.upper() for s, _ in payload]
+            size_by_sha1 = {s.upper(): size for s, size in payload}
+        else:
+            sha1_list = [s.upper() for s in payload]
+            size_by_sha1 = {}
         resp = self.session.make_request(
             method="POST",
             path="/emby_mediainfo_data/get",
-            json_data={"sha1s": [s.upper() for s in payload]},
+            json_data={"sha1s": sha1_list},
         )
         items = resp.json()
         result = {}
         for it in items:
             sha1 = it["sha1"].upper()
             raw = it.get("data")
-            if raw is not None:
-                result[sha1] = loads(decompress(b64decode(raw)))
-            else:
+            if raw is None:
                 result[sha1] = None
+                continue
+            data = loads(decompress(b64decode(raw)))
+            actual_size = self.get_emby_media_source_size(data)
+            if actual_size is None:
+                result[sha1] = None
+                continue
+            expected_size = size_by_sha1.get(sha1)
+            if (
+                expected_size is not None
+                and expected_size > 0
+                and expected_size != actual_size
+            ):
+                result[sha1] = None
+                continue
+            result[sha1] = data
         return result
