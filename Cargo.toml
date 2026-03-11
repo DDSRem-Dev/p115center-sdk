@@ -1,6 +1,6 @@
 [package]
 name = "p115center-sdk"
-version = "0.0.11"
+version = "0.0.12"
 edition = "2021"
 description = "115 网盘中心化服务 Python SDK"
 

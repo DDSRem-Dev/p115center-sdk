@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 
 from base64 import b64decode
@@ -379,6 +379,19 @@ class P115Center:
         size = msi.get("Size")
         return int(size) if size is not None else None
 
+    @staticmethod
+    def _size_mismatch(expected: Optional[int], actual: int) -> bool:
+        """
+        判断预期大小与实际大小是否超出 0.5% 误差
+
+        :param expected: 预期大小（字节）；为 None 或 ≤0 时不校验，视为通过
+        :param actual: 实际大小（字节）
+        :return: True 表示不通过（相对误差超过 0.5%），False 表示通过（在容差内或未校验）
+        """
+        if expected is None or expected <= 0:
+            return False
+        return abs(actual - expected) > expected * 0.005
+
     def upload_emby_mediainfo_data(
         self, sha1: str, data: Dict[str, Any], /, size: Optional[int] = None
     ) -> bool:
@@ -393,7 +406,7 @@ class P115Center:
         actual_size = self.get_emby_media_source_size(data)
         if actual_size is None:
             return False
-        if size is not None and size > 0 and size != actual_size:
+        if self._size_mismatch(size, actual_size):
             return False
         self.session.make_request(
             method="POST",
@@ -433,7 +446,7 @@ class P115Center:
             actual_size = self.get_emby_media_source_size(data)
             if actual_size is None:
                 continue
-            if size is not None and size > 0 and size != actual_size:
+            if self._size_mismatch(size, actual_size):
                 continue
             files_data.append(
                 ("files", (sha1.upper(), compress(dumps(data)), "application/gzip"))
@@ -486,11 +499,7 @@ class P115Center:
                 result[sha1] = None
                 continue
             expected_size = size_by_sha1.get(sha1)
-            if (
-                expected_size is not None
-                and expected_size > 0
-                and expected_size != actual_size
-            ):
+            if self._size_mismatch(expected_size, actual_size):
                 result[sha1] = None
                 continue
             result[sha1] = data
