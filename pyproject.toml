@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "p115center-sdk"
-version = "0.0.13"
+version = "0.0.14"
 description = "115 网盘中心化服务 Python SDK"
 readme = "README.md"
 license = "MIT"

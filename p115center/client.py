@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 
 from base64 import b64decode
@@ -275,17 +275,24 @@ class P115Center:
         )
         return resp.json()
 
-    def download_share_file_iter(self, batch_id: str, temp_file: str) -> None:
+    def download_share_file_iter(
+        self,
+        batch_id: str,
+        temp_file: str,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
         """
         下载分享文件信息迭代数据
 
         :param batch_id: 上传 Batch Id
         :param temp_file: 临时文件路径
+        :param headers: 额外请求头
         """
         resp = self.session.make_request(
             path=f"/share/files/{batch_id}",
             method="GET",
             timeout=6000.0,
+            headers=headers,
         )
         with open(temp_file, "wb") as f:
             for chunk in resp.iter_bytes():
@@ -336,12 +343,15 @@ class P115Center:
         return ShareIterUploadInfo(**resp.json())
 
     def upload_mediainfo_data(
-        self, payload: List[Tuple[str, Tuple[str, bytes, str]]]
+        self,
+        payload: List[Tuple[str, Tuple[str, bytes, str]]],
+        headers: Optional[Dict[str, str]] = None,
     ) -> UploadMediaInfoData:
         """
         上传 115 网盘的媒体信息数据文件
 
         :param payload: 媒体信息数据列表
+        :param headers: 额外请求头
         :return: UploadMediaInfoData
         """
         resp = self.session.make_request(
@@ -349,21 +359,28 @@ class P115Center:
             path="/mediainfo_data/bulk",
             files_data=payload,
             timeout=600.0,
-            headers=self.sign.get_sign("POST", "/mediainfo_data/bulk"),
+            headers={
+                **self.sign.get_sign("POST", "/mediainfo_data/bulk"),
+                **(headers or {}),
+            },
         )
         return UploadMediaInfoData(**resp.json())
 
-    def download_mediainfo_data(self, payload: List[str]) -> List[Dict[str, Any]]:
+    def download_mediainfo_data(
+        self, payload: List[str], headers: Optional[Dict[str, str]] = None
+    ) -> List[Dict[str, Any]]:
         """
         下载 115 网盘的媒体信息数据文件
 
         :param payload: 媒体信息数据文件 sha1 列表
+        :param headers: 额外请求头
         :return: 每项为 {"sha1": str, "data": str | None}，data 为 base64 编码
         """
         resp = self.session.make_request(
             method="POST",
             path="/mediainfo_data/get",
             json_data={"sha1s": payload},
+            headers=headers,
         )
         return resp.json()
 
@@ -400,7 +417,13 @@ class P115Center:
         return abs(actual - expected) > expected * 0.005
 
     def upload_emby_mediainfo_data(
-        self, sha1: str, data: Dict[str, Any], /, size: Optional[int] = None
+        self,
+        sha1: str,
+        data: Dict[str, Any],
+        /,
+        size: Optional[int] = None,
+        *,
+        headers: Optional[Dict[str, str]] = None,
     ) -> bool:
         """
         上传 Emby 的媒体信息数据
@@ -408,6 +431,7 @@ class P115Center:
         :param sha1: 媒体信息数据 SHA1
         :param data: 媒体信息数据
         :param size: 媒体信息数据大小(字节)
+        :param headers: 额外请求头
         :return: 是否上传成功
         """
         actual_size = self.get_emby_media_source_size(data)
@@ -423,6 +447,7 @@ class P115Center:
                 "Content-Type": "application/x-gzip",
                 "X-SHA1": sha1.upper(),
                 **self.sign.get_sign("POST", "/emby_mediainfo_data/upload"),
+                **(headers or {}),
             },
             timeout=600.0,
         )
@@ -436,11 +461,13 @@ class P115Center:
                 Tuple[str, Dict[str, Any], Optional[int]],
             ]
         ],
+        headers: Optional[Dict[str, str]] = None,
     ) -> UploadMediaInfoData:
         """
         批量上传 Emby 的媒体信息数据
 
         :param payload: (sha1, 媒体信息数据) 或 (sha1, 媒体信息数据, size) 列表
+        :param headers: 额外请求头
         :return: UploadMediaInfoData；校验不通过的项会跳过
         """
         files_data = []
@@ -467,18 +494,23 @@ class P115Center:
             path="/emby_mediainfo_data/bulk",
             files_data=files_data,
             timeout=600.0,
-            headers=self.sign.get_sign("POST", "/emby_mediainfo_data/bulk"),
+            headers={
+                **self.sign.get_sign("POST", "/emby_mediainfo_data/bulk"),
+                **(headers or {}),
+            },
         )
         return UploadMediaInfoData(**resp.json())
 
     def download_emby_mediainfo_data(
         self,
         payload: Union[List[str], List[Tuple[str, Optional[int]]]],
+        headers: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Optional[Any]]:
         """
         根据 SHA1 列表批量获取 Emby 媒体信息数据
 
         :param payload: sha1 列表，或 (sha1, size) 列表用于校验；单次最多 2000 条
+        :param headers: 额外请求头
         :return: 键为 sha1，值为媒体信息数据；无 Size 或 size 校验不通过时为 None
         """
         if payload and isinstance(payload[0], tuple):
@@ -491,6 +523,7 @@ class P115Center:
             method="POST",
             path="/emby_mediainfo_data/get",
             json_data={"sha1s": sha1_list},
+            headers=headers,
         )
         items = resp.json()
         result = {}
