@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 
 from base64 import b64decode
@@ -292,13 +292,17 @@ class P115Center:
                 f.write(chunk)
 
     def upload_share_file_iter(
-        self, batch_id: str, temp_file: str
+        self,
+        batch_id: str,
+        temp_file: str,
+        headers: Optional[Dict[str, str]] = None,
     ) -> ShareIterUploadInfo:
         """
         上传分享文件信息迭代数据
 
         :param batch_id: 上传 Batch Id
         :param temp_file: 临时文件路径
+        :param headers: 额外请求头
         :return: ShareIterUploadInfo
         """
         file_name = f"{batch_id}.json.gz"
@@ -324,7 +328,10 @@ class P115Center:
             method="POST",
             files_data=files_data,
             timeout=600000.0,
-            headers=self.sign.get_sign("POST", f"/share/files/{batch_id}"),
+            headers={
+                **self.sign.get_sign("POST", f"/share/files/{batch_id}"),
+                **(headers or {}),
+            },
         )
         return ShareIterUploadInfo(**resp.json())
 
