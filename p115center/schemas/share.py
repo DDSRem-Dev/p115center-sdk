@@ -1,9 +1,15 @@
-__all__ = ["MediaType", "ShareInfo", "ShareInfoRes", "ShareIterUploadInfo"]
+__all__ = [
+    "MediaType",
+    "ShareInfo",
+    "ShareInfoRes",
+    "ShareIterUploadInfo",
+    "ShareFilesDeleteRes",
+]
 
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -60,3 +66,12 @@ class ShareIterUploadInfo(BaseModel):
     status: str = Field(..., description="上传状态")
     file_id: str = Field(..., description="文件 ID")
     batch_id: str = Field(..., description="上传 Batch Id")
+
+
+class ShareFilesDeleteRes(BaseModel):
+    """
+    删除分享文件迭代数据成功响应
+    """
+
+    status: Literal["deleted"] = Field(..., description="删除状态")
+    batch_id: str = Field(..., description="Batch Id")
