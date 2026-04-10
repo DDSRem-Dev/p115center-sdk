@@ -3,7 +3,7 @@ __all__ = [
     "ShareInfo",
     "ShareInfoRes",
     "ShareIterUploadInfo",
-    "ShareFilesDeleteRes",
+    "ShareIterDeleteRes",
 ]
 
 
@@ -68,7 +68,7 @@ class ShareIterUploadInfo(BaseModel):
     batch_id: str = Field(..., description="上传 Batch Id")
 
 
-class ShareFilesDeleteRes(BaseModel):
+class ShareIterDeleteRes(BaseModel):
     """
     删除分享文件迭代数据成功响应
     """

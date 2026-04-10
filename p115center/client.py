@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.15"
+__version__ = "0.0.16"
 
 
 from base64 import b64decode
@@ -14,7 +14,7 @@ from orjson import dumps, loads
 from .schemas.mediainfo_data import UploadMediaInfoData
 from .schemas.offline import OfflineInfo, OfflineInfoRes
 from .schemas.share import (
-    ShareFilesDeleteRes,
+    ShareIterDeleteRes,
     ShareInfo,
     ShareInfoRes,
     ShareIterUploadInfo,
@@ -347,17 +347,17 @@ class P115Center:
         )
         return ShareIterUploadInfo(**resp.json())
 
-    def delete_share_files(
+    def delete_share_file_iter(
         self,
         batch_id: str,
         headers: Optional[Dict[str, str]] = None,
-    ) -> ShareFilesDeleteRes:
+    ) -> ShareIterDeleteRes:
         """
-        删除指定 batch 的分享文件迭代数据
+        删除指定 batch 的分享文件信息迭代数据
 
         :param batch_id: 上传 Batch Id
         :param headers: 额外请求头
-        :return: ShareFilesDeleteRes
+        :return: ShareIterDeleteRes
         """
         resp = self.session.make_request(
             path=f"/share/files/{batch_id}",
@@ -368,7 +368,7 @@ class P115Center:
                 **(headers or {}),
             },
         )
-        return ShareFilesDeleteRes(**resp.json())
+        return ShareIterDeleteRes(**resp.json())
 
     def upload_mediainfo_data(
         self,
