@@ -4,12 +4,14 @@ __all__ = [
     "ShareInfoRes",
     "ShareIterUploadInfo",
     "ShareIterDeleteRes",
+    "ShareSnapInvalidEntry",
+    "ShareSnapValidateRes",
 ]
 
 
 from datetime import datetime
 from enum import Enum
-from typing import Literal, Optional
+from typing import Literal, Optional, Union, Any, List, Dict
 
 from pydantic import BaseModel, Field
 
@@ -75,3 +77,22 @@ class ShareIterDeleteRes(BaseModel):
 
     status: Literal["deleted"] = Field(..., description="删除状态")
     batch_id: str = Field(..., description="Batch Id")
+
+
+class ShareSnapInvalidEntry(BaseModel):
+    """
+    单组校验失败时的条目
+    """
+
+    share_code: str = Field(..., description="分享码")
+    receive_code: str = Field(..., description="提取码")
+    error: Union[str, Dict[str, Any]] = Field(..., description="错误信息")
+
+
+class ShareSnapValidateRes(BaseModel):
+    """
+    批量校验结果
+    """
+
+    valid_count: int = Field(..., description="校验通过的数量")
+    invalid: List[ShareSnapInvalidEntry] = Field(..., description="校验失败的条目")

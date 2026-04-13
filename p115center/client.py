@@ -1,5 +1,5 @@
 __all__ = ["P115Center"]
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 
 from base64 import b64decode
@@ -18,6 +18,7 @@ from .schemas.share import (
     ShareInfo,
     ShareInfoRes,
     ShareIterUploadInfo,
+    ShareSnapValidateRes,
 )
 from .schemas.speed import UserSpeedStatus
 from .schemas.upload import UploadInfo, UploadInfoRes
@@ -369,6 +370,32 @@ class P115Center:
             },
         )
         return ShareIterDeleteRes(**resp.json())
+
+    def share_validate_snap(
+        self,
+        payload: List[List[str]],
+        headers: Optional[Dict[str, str]] = None,
+    ) -> ShareSnapValidateRes:
+        """
+        校验一组分享是否有效
+
+        :param payload: 分享列表，每个元素为 [share_code, receive_code]
+        :param headers: 额外请求头
+        :return: ShareSnapValidateRes
+        """
+        resp = self.session.make_request(
+            path="/share/validate_snap",
+            json_data={
+                "pairs": payload,
+            },
+            method="POST",
+            timeout=120.0,
+            headers={
+                **self.sign.get_sign("POST", "/share/validate_snap"),
+                **(headers or {}),
+            },
+        )
+        return ShareSnapValidateRes(**resp.json())
 
     def upload_mediainfo_data(
         self,
